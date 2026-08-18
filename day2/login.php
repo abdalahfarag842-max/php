@@ -1,3 +1,53 @@
+<?php
+session_start();
+
+// لو المستخدم مسجل دخول بالفعل يروح على صفحة كل اليوزرز
+if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
+    header("Location: alluser.php");
+    exit;
+}
+
+if (!isset($_SESSION['users'])) {
+    $_SESSION['users'] = [];
+}
+
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $email    = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if ($email === '' || $password === '') {
+        $errors[] = "من فضلك املأ كل الحقول";
+    } else {
+
+        $foundUser = null;
+
+        foreach ($_SESSION['users'] as $user) {
+            if (strtolower($user['email']) === strtolower($email)) {
+                $foundUser = $user;
+                break;
+            }
+        }
+
+        if (!$foundUser || !password_verify($password, $foundUser['password'])) {
+            $errors[] = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+        } else {
+            // نجاح تسجيل الدخول
+            $_SESSION['loggedin']    = true;
+            $_SESSION['current_user'] = [
+                'id'    => $foundUser['id'],
+                'name'  => $foundUser['name'],
+                'email' => $foundUser['email'],
+            ];
+
+            header("Location: allUsers.php");
+            exit;
+        }
+    }
+}
+?>
 <!DOCTYPE html> 
 <html lang="en"> 
 <head> 
@@ -91,6 +141,19 @@
         a:hover {
             text-decoration: underline;
         }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #fdecea;
+            color: #b71c1c;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head> 
 
@@ -99,9 +162,19 @@
     <section> 
         <div class="container"> 
             <h2>Login</h2> 
-             
-            <form action=""> 
-                <input type="email" name="email" placeholder="Enter Email" required> 
+
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-error">
+                    <ul style="list-style:none;">
+                        <?php foreach ($errors as $error): ?>
+                            <li>• <?= htmlspecialchars($error) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <form action="" method="POST"> 
+                <input type="email" name="email" placeholder="Enter Email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required> 
                 <input type="password" name="password" placeholder="Password" required> 
                 <button class="btn" type="submit"> login </button>
             </form> 
